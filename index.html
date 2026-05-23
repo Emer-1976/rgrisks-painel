@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Gestao de Processos | RG Risks</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #F4F6FA; color: #1F2937; font-size: 14px; }
+.header { background: #1F3864; color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,.08); }
+.header .logo { font-weight: 700; font-size: 18px; letter-spacing: .5px; }
+.header .logo span { color: #F2CB05; }
+.header .title { font-size: 16px; font-weight: 600; }
+.header .user { font-size: 14px; opacity: .9; }
+.container { max-width: 1400px; margin: 0 auto; padding: 24px 28px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi { background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,.06); cursor: pointer; transition: transform .15s, box-shadow .15s; border-left: 4px solid; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+.kpi.active { box-shadow: 0 0 0 2px #2E75B6; }
+.kpi .label { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
+.kpi .value { font-size: 36px; font-weight: 700; margin: 6px 0 4px; line-height: 1; }
+.kpi .sub { font-size: 12px; color: #6B7280; }
+.kpi.aberto { border-color: #F2CB05; } .kpi.aberto .label, .kpi.aberto .value { color: #7F6000; }
+.kpi.andamento { border-color: #2E75B6; } .kpi.andamento .label, .kpi.andamento .value { color: #1F3864; }
+.kpi.fechado { border-color: #548235; } .kpi.fechado .label, .kpi.fechado .value { color: #375623; }
+.kpi.sla { border-color: #C00000; background: #FEF2F2; } .kpi.sla .label, .kpi.sla .value, .kpi.sla .sub { color: #C00000; }
+.filtros { background: #fff; border-radius: 10px; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.filtros input[type=text], .filtros select { padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 6px; font-size: 14px; background: #fff; }
+.filtros input[type=text] { flex: 1; min-width: 220px; }
+.filtros .toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #4B5563; cursor: pointer; }
+.filtros .btn-novo { background: #2E75B6; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-left: auto; }
+.filtros .btn-novo:hover { background: #1F3864; }
+.tabela-wrap { background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+table { width: 100%; border-collapse: collapse; }
+th { background: #374151; color: #fff; text-align: left; padding: 12px 14px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+td { padding: 12px 14px; border-bottom: 1px solid #F3F4F6; font-size: 13px; }
+tr { cursor: pointer; transition: background .1s; }
+tr:hover td { background: #F9FAFB; }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; }
+.badge.aberto { background: #FFF2CC; color: #7F6000; }
+.badge.andamento { background: #DEEBF7; color: #1F3864; }
+.badge.fechado { background: #E2EFDA; color: #375623; }
+.badge.cancelado { background: #F2F2F2; color: #6B7280; }
+.sla-cell { text-align: center; font-weight: 600; padding: 3px 10px; border-radius: 6px; display: inline-block; min-width: 50px; }
+.sla-ok { background: #E2EFDA; color: #375623; }
+.sla-warn { background: #FFF2CC; color: #7F6000; }
+.sla-danger { background: #C00000; color: #fff; }
+.sla-done { background: #E2EFDA; color: #375623; }
+.sla-na { color: #9CA3AF; }
+.empty { text-align: center; padding: 40px; color: #9CA3AF; }
+.modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: flex-start; justify-content: center; padding: 40px 20px; overflow-y: auto; }
+.modal-bg.open { display: flex; }
+.modal { background: #fff; border-radius: 12px; max-width: 1000px; width: 100%; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.modal-header { background: #2E75B6; color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h2 { font-size: 18px; font-weight: 600; }
+.modal-close { background: transparent; border: none; color: #fff; font-size: 24px; cursor: pointer; line-height: 1; }
+.modal-body { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 0; }
+.modal-col { padding: 20px; border-right: 1px solid #E5E7EB; }
+.modal-col:last-child { border-right: none; }
+.modal-col h3 { font-size: 13px; text-transform: uppercase; color: #6B7280; margin-bottom: 14px; letter-spacing: .5px; }
+.detail-item { margin-bottom: 10px; font-size: 13px; }
+.detail-item .k { color: #6B7280; font-size: 11px; text-transform: uppercase; }
+.detail-item .v { color: #1F2937; font-weight: 500; margin-top: 2px; }
+.timeline { list-style: none; }
+.timeline li { position: relative; padding-left: 22px; margin-bottom: 14px; font-size: 13px; }
+.timeline li::before { content: ''; position: absolute; left: 4px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #2E75B6; }
+.timeline li.pending::before { background: #fff; border: 2px solid #D1D5DB; }
+.timeline li.pending { color: #9CA3AF; font-style: italic; }
+.timeline .data { color: #6B7280; font-size: 11px; display: block; }
+.doc-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #F9FAFB; border-radius: 6px; margin-bottom: 6px; font-size: 13px; color: #1F3864; cursor: pointer; }
+.doc-item:hover { background: #DEEBF7; }
+.btn-upload { display: block; width: 100%; padding: 10px; background: #fff; border: 2px dashed #2E75B6; color: #2E75B6; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.btn-upload:hover { background: #DEEBF7; }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: repeat(2, 1fr); }
+  .modal-body { grid-template-columns: 1fr; }
+  .modal-col { border-right: none; border-bottom: 1px solid #E5E7EB; }
+}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="logo">RG<span>&bull;</span>RISKS</div>
+  <div class="title">Painel de Gestao de Processos</div>
+  <div class="user">&#128100; Emerson Silva &#9662;</div>
+</header>
+<main class="container">
+  <section class="kpis">
+    <div class="kpi aberto" data-filter="ABERTO">
+      <div class="label">Abertos</div>
+      <div class="value" id="kpi-aberto">0</div>
+      <div class="sub">aguardando triagem</div>
+    </div>
+    <div class="kpi andamento" data-filter="EM ANDAMENTO">
+      <div class="label">Em andamento</div>
+      <div class="value" id="kpi-andamento">0</div>
+      <div class="sub" id="kpi-prazo-medio">&#8212;</div>
+    </div>
+    <div class="kpi fechado" data-filter="FECHADO">
+      <div class="label">Fechados (mes)</div>
+      <div class="value" id="kpi-fechado">0</div>
+      <div class="sub">entregues</div>
+    </div>
+    <div class="kpi sla" data-filter="SLA">
+      <div class="label">&#9888; SLA Estourado</div>
+      <div class="value" id="kpi-sla">0</div>
+      <div class="sub">acao imediata</div>
+    </div>
+  </section>
+  <section class="filtros">
+    <input type="text" id="busca" placeholder="&#128269; Buscar por RG No, S/No, requerente ou seguradora...">
+    <select id="f-situacao"><option value="">Situacao (todas)</option><option>ABERTO</option><option>EM ANDAMENTO</option><option>FECHADO</option><option>CANCELADO</option></select>
+    <select id="f-ramo"><option value="">Ramo (todos)</option><option>Pericia/Vistoria</option><option>Regulacao</option></select>
+    <select id="f-seguradora"><option value="">Seguradora (todas)</option></select>
+    <label class="toggle"><input type="checkbox" id="f-sla"> So SLA estourado</label>
+    <button class="btn-novo">+ Novo Processo</button>
+  </section>
+  <section class="tabela-wrap">
+    <table>
+      <thead><tr>
+        <th>Situacao</th><th>RG No</th><th>S/No</th><th>Requerente / Seguradora</th>
+        <th>Ramo</th><th>Agente</th><th>Aberto em</th><th style="text-align:center">SLA</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </section>
+</main>
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Processo</h2>
+      <button class="modal-close" id="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-col"><h3>Detalhes</h3><div id="modal-detalhes"></div></div>
+      <div class="modal-col"><h3>Timeline</h3><ul class="timeline" id="modal-timeline"></ul></div>
+      <div class="modal-col"><h3>Documentos</h3><div id="modal-docs"></div><button class="btn-upload">&#8593; Enviar arquivo</button></div>
+    </div>
+  </div>
+</div>
+<script>
+const PROCESSOS = [
+  { rg:'ES1854126', sn:'2024-998877', seguradora:'Porto Seguro',     requerente:'Joao Silva',         ramo:'Pericia/Vistoria', tipo:'Auto',         agente:'Emerson Silva', situacao:'ABERTO',       aberto:'2025-03-10', prazo:15, local:'Vitoria/ES',           valor:45000 },
+  { rg:'SP1854826', sn:'2024-998910', seguradora:'Bradesco Seguros', requerente:'Maria Costa',        ramo:'Regulacao',        tipo:'Residencial',  agente:'Emerson Silva', situacao:'EM ANDAMENTO', aberto:'2025-02-28', prazo:30, local:'Sao Paulo/SP',          valor:120000 },
+  { rg:'RS1899726', sn:'2024-997711', seguradora:'SulAmerica',       requerente:'Construtora ABC',    ramo:'Pericia/Vistoria', tipo:'Empresarial',  agente:'Andreia Lima',  situacao:'EM ANDAMENTO', aberto:'2025-02-15', prazo:15, local:'Porto Alegre/RS',       valor:380000 },
+  { rg:'ES1854001', sn:'2024-996502', seguradora:'Tokio Marine',     requerente:'Carlos Mendes',      ramo:'Pericia/Vistoria', tipo:'Auto',         agente:'Emerson Silva', situacao:'FECHADO',      aberto:'2025-02-01', prazo:15, local:'Vila Velha/ES',         valor:28000 },
+  { rg:'MG1850012', sn:'2024-995501', seguradora:'Mapfre',           requerente:'Ana Pereira',        ramo:'Regulacao',        tipo:'Auto',         agente:'Andreia Lima',  situacao:'CANCELADO',    aberto:'2025-01-20', prazo:30, local:'Belo Horizonte/MG',     valor:18000 },
+  { rg:'RJ1860015', sn:'2024-994433', seguradora:'Allianz',          requerente:'Pedro Almeida',      ramo:'Pericia/Vistoria', tipo:'Residencial',  agente:'Emerson Silva', situacao:'EM ANDAMENTO', aberto:'2025-03-05', prazo:15, local:'Niteroi/RJ',            valor:95000 },
+  { rg:'ES1854200', sn:'2024-993210', seguradora:'Porto Seguro',     requerente:'Luiz Fernandes',     ramo:'Regulacao',        tipo:'Auto',         agente:'Andreia Lima',  situacao:'ABERTO',       aberto:'2025-03-18', prazo:30, local:'Serra/ES',              valor:22000 },
+  { rg:'BA1870008', sn:'2024-992001', seguradora:'HDI Seguros',      requerente:'Fernanda Rocha',     ramo:'Pericia/Vistoria', tipo:'Auto',         agente:'Emerson Silva', situacao:'FECHADO',      aberto:'2025-02-12', prazo:15, local:'Salvador/BA',           valor:35000 },
+  { rg:'PR1880003', sn:'2024-991502', seguradora:'Bradesco Seguros', requerente:'Industria Sul Ltda', ramo:'Pericia/Vistoria', tipo:'Empresarial',  agente:'Andreia Lima',  situacao:'EM ANDAMENTO', aberto:'2025-02-22', prazo:15, local:'Curitiba/PR',           valor:540000 },
+  { rg:'ES1854330', sn:'2024-990888', seguradora:'SulAmerica',       requerente:'Roberto Dias',       ramo:'Regulacao',        tipo:'Vida',         agente:'Emerson Silva', situacao:'EM ANDAMENTO', aberto:'2025-03-08', prazo:30, local:'Vitoria/ES',            valor:200000 },
+  { rg:'SC1890011', sn:'2024-989777', seguradora:'Tokio Marine',     requerente:'Marina Souza',       ramo:'Pericia/Vistoria', tipo:'Residencial',  agente:'Andreia Lima',  situacao:'ABERTO',       aberto:'2025-03-19', prazo:15, local:'Florianopolis/SC',      valor:75000 },
+  { rg:'ES1854221', sn:'2024-988555', seguradora:'Allianz',          requerente:'Claudia Martins',    ramo:'Regulacao',        tipo:'Auto',         agente:'Emerson Silva', situacao:'FECHADO',      aberto:'2025-01-15', prazo:30, local:'Cariacica/ES',          valor:16500 },
+  { rg:'RJ1860101', sn:'2024-987201', seguradora:'Porto Seguro',     requerente:'Ricardo Nunes',      ramo:'Pericia/Vistoria', tipo:'Auto',         agente:'Andreia Lima',  situacao:'ABERTO',       aberto:'2025-03-20', prazo:15, local:'Rio de Janeiro/RJ',     valor:52000 },
+  { rg:'MG1850077', sn:'2024-986101', seguradora:'Mapfre',           requerente:'Comercial Forte',    ramo:'Regulacao',        tipo:'Empresarial',  agente:'Emerson Silva', situacao:'EM ANDAMENTO', aberto:'2025-02-10', prazo:30, local:'Uberlandia/MG',         valor:410000 },
+  { rg:'GO1881044', sn:'2024-985007', seguradora:'HDI Seguros',      requerente:'Camila Ribeiro',     ramo:'Pericia/Vistoria', tipo:'Auto',         agente:'Andreia Lima',  situacao:'FECHADO',      aberto:'2025-01-25', prazo:15, local:'Goiania/GO',            valor:31000 }
+];
+const HOJE = new Date();
+const fmtData = s => { const [y,m,d] = s.split('-'); return d+'/'+m+'/'+y.slice(2); };
+const fmtMoeda = v => v.toLocaleString('pt-BR', { style:'currency', currency:'BRL', maximumFractionDigits:0 });
+const diasRestantes = p => {
+  if (p.situacao === 'FECHADO' || p.situacao === 'CANCELADO') return null;
+  const aberto = new Date(p.aberto);
+  const passados = Math.floor((HOJE - aberto) / 86400000);
+  return p.prazo - passados;
+};
+const slaCell = p => {
+  if (p.situacao === 'CANCELADO') return '<span class="sla-na">-</span>';
+  if (p.situacao === 'FECHADO') return '<span class="sla-cell sla-done">&#10003;</span>';
+  const d = diasRestantes(p);
+  if (d < 0) return '<span class="sla-cell sla-danger">'+d+'d</span>';
+  if (d <= 5) return '<span class="sla-cell sla-warn">'+d+'d</span>';
+  return '<span class="sla-cell sla-ok">'+d+'d</span>';
+};
+const badgeClass = s => ({ 'ABERTO':'aberto','EM ANDAMENTO':'andamento','FECHADO':'fechado','CANCELADO':'cancelado' }[s]);
+let filtroAtivo = null;
+function render() {
+  const q = document.getElementById('busca').value.toLowerCase();
+  const fS = document.getElementById('f-situacao').value;
+  const fR = document.getElementById('f-ramo').value;
+  const fSeg = document.getElementById('f-seguradora').value;
+  const fSla = document.getElementById('f-sla').checked;
+  let lista = PROCESSOS.filter(p => {
+    if (q && ![p.rg, p.sn, p.requerente, p.seguradora].join(' ').toLowerCase().includes(q)) return false;
+    if (fS && p.situacao !== fS) return false;
+    if (fR && p.ramo !== fR) return false;
+    if (fSeg && p.seguradora !== fSeg) return false;
+    if (fSla) { const d = diasRestantes(p); if (d === null || d >= 0) return false; }
+    if (filtroAtivo === 'SLA') { const d = diasRestantes(p); if (d === null || d >= 0) return false; }
+    else if (filtroAtivo) { if (p.situacao !== filtroAtivo) return false; }
+    return true;
+  });
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = lista.length ? lista.map(p =>
+    '<tr data-i="'+PROCESSOS.indexOf(p)+'">' +
+    '<td><span class="badge '+badgeClass(p.situacao)+'">'+p.situacao+'</span></td>' +
+    '<td><strong>'+p.rg+'</strong></td>' +
+    '<td>'+p.sn+'</td>' +
+    '<td>'+p.requerente+'<br><small style="color:#6B7280">'+p.seguradora+'</small></td>' +
+    '<td>'+p.ramo+'</td>' +
+    '<td>'+p.agente+'</td>' +
+    '<td>'+fmtData(p.aberto)+'</td>' +
+    '<td style="text-align:center">'+slaCell(p)+'</td>' +
+    '</tr>').join('') : '<tr><td colspan="8" class="empty">Nenhum processo encontrado.</td></tr>';
+}
+function renderKPIs() {
+  const ativos = PROCESSOS.filter(p => ['ABERTO','EM ANDAMENTO'].includes(p.situacao));
+  const mesAtual = HOJE.getMonth(), anoAtual = HOJE.getFullYear();
+  document.getElementById('kpi-aberto').textContent    = PROCESSOS.filter(p => p.situacao === 'ABERTO').length;
+  document.getElementById('kpi-andamento').textContent = PROCESSOS.filter(p => p.situacao === 'EM ANDAMENTO').length;
+  document.getElementById('kpi-fechado').textContent   = PROCESSOS.filter(p => { if (p.situacao !== 'FECHADO') return false; const d = new Date(p.aberto); return d.getMonth() === mesAtual && d.getFullYear() === anoAtual; }).length;
+  document.getElementById('kpi-sla').textContent       = ativos.filter(p => diasRestantes(p) < 0).length;
+  const prazos = ativos.map(diasRestantes).filter(x => x !== null);
+  const med = prazos.length ? Math.round(prazos.reduce((a,b) => a+b, 0) / prazos.length) : 0;
+  document.getElementById('kpi-prazo-medio').textContent = 'prazo medio: ' + med + ' dias';
+}
+function preencherSeguradoras() {
+  const seg = document.getElementById('f-seguradora');
+  [...new Set(PROCESSOS.map(p => p.seguradora))].sort().forEach(s => { const o = document.createElement('option'); o.textContent = s; seg.appendChild(o); });
+}
+function abrirModal(idx) {
+  const p = PROCESSOS[idx];
+  document.getElementById('modal-title').textContent = p.rg + ' - ' + p.requerente + ' (' + p.seguradora + ')';
+  document.getElementById('modal-detalhes').innerHTML = [
+    ['Situacao', p.situacao], ['Ramo', p.ramo], ['Tipo', p.tipo], ['Local', p.local],
+    ['Valor estimado', fmtMoeda(p.valor)], ['Agente responsavel', p.agente],
+    ['Aberto em', fmtData(p.aberto)], ['Prazo', p.prazo + ' dias']
+  ].map(([k,v]) => '<div class="detail-item"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>').join('');
+  const etapasPericia   = ['Processo aberto','Vistoria agendada','Vistoria realizada','Laudo em elaboracao','Laudo entregue','Processo fechado'];
+  const etapasRegulacao = ['Processo aberto','Documentacao solicitada','Documentacao recebida','Analise tecnica','Parecer emitido','Processo fechado'];
+  const etapas = p.ramo === 'Pericia/Vistoria' ? etapasPericia : etapasRegulacao;
+  let etapaAtual = 1;
+  if (p.situacao === 'EM ANDAMENTO') etapaAtual = Math.min(4, etapas.length - 1);
+  if (p.situacao === 'FECHADO') etapaAtual = etapas.length;
+  if (p.situacao === 'CANCELADO') etapaAtual = 1;
+  document.getElementById('modal-timeline').innerHTML = etapas.map((e,i) => {
+    const done = i < etapaAtual;
+    return '<li class="'+(done ? '' : 'pending')+'">'+(done ? '&#10003; ' : '')+e+(done ? '<span class="data">(registrado)</span>' : '')+'</li>';
+  }).join('');
+  document.getElementById('modal-docs').innerHTML =
+    '<div class="doc-item">&#128196; laudo_preliminar.pdf</div>' +
+    '<div class="doc-item">&#128247; fotos_vistoria.zip</div>' +
+    '<div class="doc-item">&#128196; documento_segurado.pdf</div>';
+  document.getElementById('modal').classList.add('open');
+}
+document.getElementById('busca').addEventListener('input', render);
+document.getElementById('f-situacao').addEventListener('change', render);
+document.getElementById('f-ramo').addEventListener('change', render);
+document.getElementById('f-seguradora').addEventListener('change', render);
+document.getElementById('f-sla').addEventListener('change', render);
+document.querySelectorAll('.kpi').forEach(k => k.addEventListener('click', () => {
+  const f = k.dataset.filter;
+  filtroAtivo = filtroAtivo === f ? null : f;
+  document.querySelectorAll('.kpi').forEach(x => x.classList.remove('active'));
+  if (filtroAtivo) k.classList.add('active');
+  render();
+}));
+document.getElementById('tbody').addEventListener('click', e => { const tr = e.target.closest('tr[data-i]'); if (tr) abrirModal(parseInt(tr.dataset.i)); });
+document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+document.getElementById('modal').addEventListener('click', e => { if (e.target.id === 'modal') e.currentTarget.classList.remove('open'); });
+preencherSeguradoras();
+renderKPIs();
+render();
+</script>
+</body>
+</html>
